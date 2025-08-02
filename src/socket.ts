@@ -97,7 +97,7 @@ export function initializeSocketFeatures(io: Server) {
           // Send message to the specific receiver
           const encryptedMessage = encryptMessage(msg.content ?? "");
 
-          const response = await app.apiPost("http://localhost:3000/api/user/chats/saveChat", {
+          const response = await app.apiPost(`${process.env.CLIENT_URL}/api/user/chats/saveChat"`, {
             chatId: msg.chatId,
             sender: msg.sender,
             receiver: msg.receiver,

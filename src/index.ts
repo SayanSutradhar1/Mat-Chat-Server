@@ -7,7 +7,7 @@ dotenv.config({
   path: "./.env",
 });
 
-const app = new Application(3500,"Chat app server");
+const app = new Application(Number(process.env.PORT) || 3500,"Chat app server");
 
 app.init();
 app.get();

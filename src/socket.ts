@@ -1,8 +1,8 @@
 import { Server, Socket } from "socket.io";
 import { MessagePayload } from "./interfaces/message.interface";
 
-import { app } from "./index";
 import { encryptMessage } from "./utils/encryptMessage";
+import { Application } from "./app";
 
 export const SOCKET_EVENTS = {
   CHAT_MESSAGE_SEND: "chat:message_send",
@@ -98,7 +98,7 @@ export function initializeSocketFeatures(io: Server) {
         if (receiverSocketId) {
           // Send message to the specific receiver
 
-          const response = await app.apiPost(
+          const response = await Application.apiPost(
             `${process.env.CLIENT_URL}/api/user/chats/saveChat`,
             {
               chatId: msg.chatId,
@@ -118,7 +118,7 @@ export function initializeSocketFeatures(io: Server) {
           );
         } else {
           console.log(`Receiver ${msg.receiver} not found or not connected`);
-          const response = await app.apiPost(
+          const response = await Application.apiPost(
             `${process.env.CLIENT_URL}/api/user/chats/saveChat`,
             {
               chatId: msg.chatId,

@@ -5,8 +5,6 @@ const algorithm = 'aes-256-cbc';
 
 export function encryptMessage(text: string): string {
   const secretKey = process.env.ENCRYPTION_KEY;
-
-  console.log(secretKey);
   
 
   if (!secretKey) {

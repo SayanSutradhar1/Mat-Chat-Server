@@ -38,12 +38,12 @@ export class Application {
     return this.server;
   }
 
-  async apiGet<K=unknown>(endpoint:string){
+  static async apiGet<K=unknown>(endpoint:string){
     const axiosResponse = await axios.get<ApiResponse<K>>(endpoint)
     return axiosResponse.data
   }
 
-  async apiPost<T=any,K=unknown>(endpoint:string,data:T){
+  static async apiPost<T=any,K=unknown>(endpoint:string,data:T){
     const axiosResponse = await axios.post<ApiResponse<K>>(endpoint,data)
     return axiosResponse.data
   }

@@ -92,39 +92,72 @@ export function initializeSocketFeatures(io: Server) {
       // Get the receiver's socket ID from the userIdMap
       const receiverSocketId = userIdMap.get(msg.receiver);
 
-      if (receiverSocketId) {
-        try {
+      try {
+        const encryptedMessage = encryptMessage(msg.content ?? "");
+
+        if (receiverSocketId) {
           // Send message to the specific receiver
-          const encryptedMessage = encryptMessage(msg.content ?? "");
 
-          const response = await app.apiPost(`${process.env.CLIENT_URL}/api/user/chats/saveChat"`, {
-            chatId: msg.chatId,
-            sender: msg.sender,
-            receiver: msg.receiver,
-            message: encryptedMessage,
-            time: msg.timestamp,
-          });
+          const response = await app.apiPost(
+            `${process.env.CLIENT_URL}/api/user/chats/saveChat`,
+            {
+              chatId: msg.chatId,
+              sender: msg.sender,
+              receiver: msg.receiver,
+              message: encryptedMessage,
+              time: msg.timestamp,
+            }
+          );
 
-          console.log(response)
+          console.log(response);
 
           io.to(receiverSocketId).emit(SOCKET_EVENTS.CHAT_MESSAGE_RECEIVE, msg);
 
           console.log(
             `Message sent to ${msg.receiver} (socket: ${receiverSocketId})`
           );
-        } catch (error) {
-          console.log(error);
-          
-          // Send error back to the sender
-          socket.emit('error', {
-            type: 'encryption_error',
-            message: 'Failed to encrypt message. Please check your environment configuration.'
-          });
+        } else {
+          console.log(`Receiver ${msg.receiver} not found or not connected`);
+          const response = await app.apiPost(
+            `${process.env.CLIENT_URL}/api/user/chats/saveChat`,
+            {
+              chatId: msg.chatId,
+              sender: msg.sender,
+              receiver: msg.receiver,
+              message: encryptedMessage,
+              time: msg.timestamp,
+            }
+          );
+
+          console.log(response);
         }
-      } else {
-        console.log(`Receiver ${msg.receiver} not found or not connected`);
+      } catch (error) {
+        console.log((error as Error).message);
+
+        // Send error back to the sender
+        socket.emit("error", {
+          type: "encryption_error",
+          message:
+            "Failed to encrypt message. Please check your environment configuration.",
+        });
       }
     });
+
+    // Handle message status updates (delivered/read)
+    socket.on(
+      SOCKET_EVENTS.CHAT_MESSAGE_STATUS,
+      (data: { receiver: string; chatId: string; status: string; messageId: string }) => {
+        const receiverSocketId = userIdMap.get(data.receiver);
+        if (receiverSocketId) {
+          io.to(receiverSocketId).emit(SOCKET_EVENTS.CHAT_MESSAGE_STATUS, {
+            sender: userId,
+            chatId: data.chatId,
+            status: data.status,
+            messageId: data.messageId,
+          });
+        }
+      }
+    );
 
     socket.on("disconnect", () => {
       // Remove user from userIdMap when they disconnect

@@ -92,6 +92,9 @@ export function initializeSocketFeatures(io: Server) {
       // Get the receiver's socket ID from the userIdMap
       const receiverSocketId = userIdMap.get(msg.receiver);
 
+      console.log("Message sending...");
+      
+
       try {
         const encryptedMessage = encryptMessage(msg.content ?? "");
 
@@ -131,6 +134,7 @@ export function initializeSocketFeatures(io: Server) {
 
           console.log(response);
         }
+        console.log("Message sent");
       } catch (error) {
         console.log((error as Error).message);
 

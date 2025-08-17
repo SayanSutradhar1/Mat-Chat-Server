@@ -3,6 +3,8 @@ import { MessagePayload } from "./interfaces/message.interface";
 
 import { encryptMessage } from "./utils/encryptMessage";
 import { Application } from "./app";
+import { NotificationPayload } from "./interfaces/notification.interface";
+import { FollowPayload } from "./interfaces/follow.interface";
 
 export const SOCKET_EVENTS = {
   CHAT_MESSAGE_SEND: "chat:message_send",
@@ -93,7 +95,6 @@ export function initializeSocketFeatures(io: Server) {
       const receiverSocketId = userIdMap.get(msg.receiver);
 
       console.log("Message sending...");
-      
 
       try {
         const encryptedMessage = encryptMessage(msg.content ?? "");
@@ -150,7 +151,12 @@ export function initializeSocketFeatures(io: Server) {
     // Handle message status updates (delivered/read)
     socket.on(
       SOCKET_EVENTS.CHAT_MESSAGE_STATUS,
-      (data: { receiver: string; chatId: string; status: string; messageId: string }) => {
+      (data: {
+        receiver: string;
+        chatId: string;
+        status: string;
+        messageId: string;
+      }) => {
         const receiverSocketId = userIdMap.get(data.receiver);
         if (receiverSocketId) {
           io.to(receiverSocketId).emit(SOCKET_EVENTS.CHAT_MESSAGE_STATUS, {
@@ -162,6 +168,47 @@ export function initializeSocketFeatures(io: Server) {
         }
       }
     );
+
+    // Follow
+
+    socket.on("follow", async (data : FollowPayload) => {
+      const friendSocketId = userIdMap.get(data.friendId);
+
+      console.log("follow event invoked with", data);
+
+      if (friendSocketId) {
+        // // Notification
+        io.to(friendSocketId).emit("notification", {
+          userId: data.friendId,
+          header : `New Follower`,
+          content : `${data.senderName} started following you`,
+          timeStamp : new Date(Date.now()),
+        } as NotificationPayload);
+      }
+      try {
+        const folowResponse = await Application.apiPost(
+          `${process.env.CLIENT_URL}/api/user/follow`,
+          {
+            userId: data.userId,
+            friendId: data.friendId,
+          }
+        );
+
+        const notificationResponse = await Application.apiPost(`${process.env.CLIENT_URL}/api/user/notification/new`,{
+          userId: data.friendId,
+          header : `New Follower`,
+          content : `${data.senderName} started following you`,
+          timeStamp : new Date(Date.now()),
+        })
+
+        console.log(notificationResponse.message);
+        
+
+        console.log(folowResponse.message);
+      } catch (error) {
+        console.log(error);
+      }
+    });
 
     socket.on("disconnect", () => {
       // Remove user from userIdMap when they disconnect
@@ -177,6 +224,7 @@ export function initializeSocketFeatures(io: Server) {
           console.log(`User ${userId} disconnected`);
           break;
         }
+        io.emit("active_users",Array.from(userIdMap.keys()))
       }
       console.log(`Client disconnected: ${socket.id}`);
     });

@@ -30,15 +30,24 @@ export function initializeSocketFeatures(io: Server) {
       userStatusMap.set(userId, "active");
       console.log(`New client connected: ${userId} socketId: ${socket.id}`);
 
+      io.emit("active_users", Array.from(userIdMap.keys()));
+
       // Broadcast user is now active to all connected clients
-      socket.broadcast.emit(SOCKET_EVENTS.USER_ACTIVE, {
-        userId,
-        status: "active",
-      });
     } else {
       console.log(`New client connected: ${socket.id}, userId not provided`);
       return;
     }
+
+    // Emit the active users to the newly connected client
+    socket.on("active_users", (userId) => {
+      const activeUsers = Array.from(userIdMap.keys());
+      const socketId = userIdMap.get(userId);
+      if (socketId) {
+        io.to(socketId).emit("active_users", activeUsers);
+      } else {
+        console.log(`User ${userId} not found in userIdMap`);
+      }
+    })
 
     // Handle user active status
     socket.on(SOCKET_EVENTS.USER_ACTIVE, () => {
@@ -171,7 +180,7 @@ export function initializeSocketFeatures(io: Server) {
 
     // Follow
 
-    socket.on("follow", async (data : FollowPayload) => {
+    socket.on("follow", async (data: FollowPayload) => {
       const friendSocketId = userIdMap.get(data.friendId);
 
       console.log("follow event invoked with", data);
@@ -180,9 +189,9 @@ export function initializeSocketFeatures(io: Server) {
         // // Notification
         io.to(friendSocketId).emit("notification", {
           userId: data.friendId,
-          header : `New Follower`,
-          content : `${data.senderName} started following you`,
-          timeStamp : new Date(Date.now()),
+          header: `New Follower`,
+          content: `${data.senderName} started following you`,
+          timeStamp: new Date(Date.now()),
         } as NotificationPayload);
       }
       try {
@@ -194,15 +203,17 @@ export function initializeSocketFeatures(io: Server) {
           }
         );
 
-        const notificationResponse = await Application.apiPost(`${process.env.CLIENT_URL}/api/user/notification/new`,{
-          userId: data.friendId,
-          header : `New Follower`,
-          content : `${data.senderName} started following you`,
-          timeStamp : new Date(Date.now()),
-        })
+        const notificationResponse = await Application.apiPost(
+          `${process.env.CLIENT_URL}/api/user/notification/new`,
+          {
+            userId: data.friendId,
+            header: `New Follower`,
+            content: `${data.senderName} started following you`,
+            timeStamp: new Date(Date.now()),
+          }
+        );
 
         console.log(notificationResponse.message);
-        
 
         console.log(folowResponse.message);
       } catch (error) {
@@ -224,8 +235,8 @@ export function initializeSocketFeatures(io: Server) {
           console.log(`User ${userId} disconnected`);
           break;
         }
-        io.emit("active_users",Array.from(userIdMap.keys()))
       }
+      io.emit("active_users", Array.from(userIdMap.keys()));
       console.log(`Client disconnected: ${socket.id}`);
     });
   });
